@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcadia Gaming — Yuno Payment Orchestration Proposal</title>
+<style>
+  :root {
+    --navy: #1E2761;
+    --dark: #1E293B;
+    --teal: #06B6D4;
+    --green: #10B981;
+    --purple: #7C3AED;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --light-bg: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --border: #E2E8F0;
+    --text: #334155;
+    --muted: #64748B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--light-bg); color: var(--text); }
+
+  /* NAV */
+  .topbar { background: var(--navy); padding: 12px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar .logo { color: var(--teal); font-weight: 800; font-size: 18px; letter-spacing: 2px; }
+  .topbar .subtitle { color: #94A3B8; font-size: 13px; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tabs button { background: rgba(255,255,255,0.1); border: none; color: #CBD5E1; padding: 8px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+  .nav-tabs button.active { background: var(--light-bg); color: var(--dark); }
+  .nav-tabs button:hover:not(.active) { background: rgba(255,255,255,0.2); }
+
+  /* LAYOUT */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--dark); margin-bottom: 16px; }
+  .section-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+  /* CARDS */
+  .card { background: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border); }
+  .card-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+
+  /* KPI STRIP */
+  .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { text-align: center; padding: 20px 12px; }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
+  .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 6px; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+  /* INPUTS */
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text); margin-bottom: 4px; font-weight: 500; }
+  .input-group label span { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .input-row { display: flex; align-items: center; gap: 8px; }
+  .input-row input[type="range"] { flex: 1; height: 6px; -webkit-appearance: none; background: var(--border); border-radius: 3px; outline: none; }
+  .input-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--teal); cursor: pointer; }
+  .input-row .value-display { min-width: 80px; text-align: right; font-weight: 700; font-size: 14px; color: var(--dark); }
+  .input-section-title { font-size: 12px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--teal); }
+
+  /* COMPARISON TABLE */
+  .comp-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .comp-table th { background: var(--navy); color: white; padding: 10px 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .comp-table th:first-child { border-radius: 8px 0 0 0; text-align: left; }
+  .comp-table th:last-child { border-radius: 0 8px 0 0; }
+  .comp-table th.current { background: var(--red); }
+  .comp-table th.adyen { background: var(--amber); }
+  .comp-table th.yuno { background: var(--green); }
+  .comp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .comp-table td:first-child { font-weight: 600; }
+  .comp-table td:not(:first-child) { text-align: center; font-weight: 500; }
+  .comp-table tr:nth-child(even) { background: #F8FAFC; }
+  .comp-table .highlight { color: var(--green); font-weight: 700; }
+  .comp-table .indent { padding-left: 28px; font-weight: 400; color: var(--muted); }
+
+  /* VALUE BAR */
+  .value-bar { background: var(--navy); border-radius: 12px; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; margin: 24px 0; }
+  .value-bar .label { color: #94A3B8; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .value-bar .amount { color: white; font-size: 40px; font-weight: 800; }
+
+  /* BREAKDOWN BARS */
+  .breakdown { display: flex; gap: 4px; height: 32px; border-radius: 6px; overflow: hidden; margin: 12px 0; }
+  .breakdown div { display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600; min-width: 40px; }
+
+  /* SLIDE VIEW */
+  .slide-container { background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .slide { aspect-ratio: 16/9; padding: 48px 60px; position: relative; display: none; }
+  .slide.active { display: flex; flex-direction: column; }
+  .slide-nav { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 12px; background: #F1F5F9; }
+  .slide-nav button { background: var(--navy); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .slide-nav button:disabled { opacity: 0.3; cursor: default; }
+  .slide-nav .counter { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+  /* SLIDE STYLES */
+  .slide-dark { background: var(--navy); color: white; }
+  .slide-light { background: var(--light-bg); }
+  .slide-white { background: white; }
+  .s-tag { font-size: 13px; font-weight: 700; color: var(--teal); letter-spacing: 2px; margin-bottom: 8px; }
+  .s-title { font-size: 36px; font-weight: 700; font-family: Georgia, serif; line-height: 1.2; margin-bottom: 12px; }
+  .s-subtitle { font-size: 15px; color: #94A3B8; margin-bottom: 20px; }
+  .s-metrics { display: flex; gap: 32px; margin-top: auto; }
+  .s-metric-val { font-size: 28px; font-weight: 800; color: var(--teal); }
+  .s-metric-label { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+  .s-cards { display: flex; gap: 16px; flex: 1; }
+  .s-card { flex: 1; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; border-top: 3px solid var(--teal); }
+  .slide-light .s-card { background: white; border: 1px solid var(--border); }
+  .s-card-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+  .s-card-value { font-size: 24px; font-weight: 800; color: var(--dark); }
+  .s-card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .s-divider { width: 80px; height: 3px; background: var(--teal); margin: 12px 0; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ORCHESTRATOR DIAGRAM */
+  .orch-diagram { display: flex; align-items: center; justify-content: center; gap: 0; margin: 24px 0; }
+  .orch-box { padding: 12px 20px; border-radius: 8px; text-align: center; font-size: 12px; font-weight: 600; }
+  .orch-arrow { font-size: 24px; color: var(--muted); margin: 0 8px; }
+  .orch-merchant { background: #DBEAFE; color: #1E40AF; }
+  .orch-yuno { background: #EDE9FE; color: #5B21B6; border: 2px solid var(--purple); }
+  .orch-acquirer { background: #D1FAE5; color: #065F46; font-size: 11px; }
+
+  @media (max-width: 900px) {
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="logo">YUNO</div>
+    <div class="subtitle">Arcadia Gaming — Interactive Proposal</div>
+  </div>
+  <div class="nav-tabs">
+    <button class="active" onclick="switchTab('model')">Financial Model</button>
+    <button onclick="switchTab('presentation')">Presentation</button>
+  </div>
+</div>
+
+<!-- TAB: FINANCIAL MODEL -->
+<div id="tab-model" class="tab-content active">
+<div class="container">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="card kpi-card"><div class="kpi-value" style="color:var(--green)" id="kpi-benefit">$18.5M</div><div class="kpi-label">Annual Net Benefit</div></div>
+    <div class="card kpi-card"><div class="kpi-value" style="color:var(--navy)" id="kpi-savings">$8.2M</div><div class="kpi-label">Cost Savings</div></div>
+    <div class="card kpi-card"><div class="kpi-value" style="color:var(--teal)" id="kpi-rate">3.7%</div><div class="kpi-label">Yuno Effective Rate</div></div>
+    <div class="card kpi-card"><div class="kpi-value" style="color:var(--purple)" id="kpi-adyen-savings">$5.1M</div><div class="kpi-label">Savings vs Adyen</div></div>
+    <div class="card kpi-card"><div class="kpi-value" style="color:var(--amber)" id="kpi-approval">77%</div><div class="kpi-label">SEA Approval Rate</div></div>
+  </div>
+
+  <!-- ORCHESTRATOR DIAGRAM -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header">How Yuno Works — Orchestration Model</div>
+    <div class="orch-diagram">
+      <div class="orch-box orch-merchant">Arcadia Gaming<br><span style="font-size:10px;font-weight:400">Merchant</span></div>
+      <div class="orch-arrow">→</div>
+      <div class="orch-box orch-yuno">YUNO<br><span style="font-size:10px;font-weight:400">Orchestration Layer<br>30 bps + $0.02/txn</span></div>
+      <div class="orch-arrow">→</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="orch-box orch-acquirer">2C2P / DOKU (SEA)</div>
+        <div class="orch-box orch-acquirer">dLocal / Adyen (LatAm)</div>
+        <div class="orch-box orch-acquirer">Adyen / Worldpay (EU)</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--muted)">Total Merchant Cost = Acquirer Passthrough (IC + Scheme + Markup) + Yuno Orchestration Fee</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- LEFT: INPUTS -->
+    <div class="card">
+      <div class="card-header">Model Assumptions — Adjust Inputs</div>
+
+      <div class="input-section-title">Market Data</div>
+      <div class="input-group">
+        <label>Annual Payment Volume (TPV) <span>$M</span></label>
+        <div class="input-row">
+          <input type="range" min="100" max="1000" step="10" value="420" id="tpv" oninput="recalc()">
+          <div class="value-display" id="tpv-val">$420M</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Avg Transaction Size <span>$</span></label>
+        <div class="input-row">
+          <input type="range" min="3" max="50" step="0.5" value="9.12" id="avgTxn" oninput="recalc()">
+          <div class="value-display" id="avgTxn-val">$9.12</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Gross Margin <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="5" max="40" step="1" value="18" id="grossMargin" oninput="recalc()">
+          <div class="value-display" id="grossMargin-val">18%</div>
+        </div>
+      </div>
+
+      <div class="input-section-title">Current Approval Rates</div>
+      <div class="input-group">
+        <label>SEA (Stripe XB) <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="50" max="90" step="1" value="68" id="seaApproval" oninput="recalc()">
+          <div class="value-display" id="seaApproval-val">68%</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>LatAm (PayU) <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="50" max="90" step="1" value="74" id="latamApproval" oninput="recalc()">
+          <div class="value-display" id="latamApproval-val">74%</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Europe (Adyen) <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="60" max="95" step="1" value="81" id="euApproval" oninput="recalc()">
+          <div class="value-display" id="euApproval-val">81%</div>
+        </div>
+      </div>
+
+      <div class="input-section-title">Yuno Target Approval Rates</div>
+      <div class="input-group">
+        <label>SEA Target <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="60" max="95" step="1" value="77" id="seaTarget" oninput="recalc()">
+          <div class="value-display" id="seaTarget-val">77%</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>LatAm Target <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="60" max="95" step="1" value="80" id="latamTarget" oninput="recalc()">
+          <div class="value-display" id="latamTarget-val">80%</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Europe Target <span>%</span></label>
+        <div class="input-row">
+          <input type="range" min="70" max="98" step="1" value="84" id="euTarget" oninput="recalc()">
+          <div class="value-display" id="euTarget-val">84%</div>
+        </div>
+      </div>
+
+      <div class="input-section-title">Yuno Orchestration Fees</div>
+      <div class="input-group">
+        <label>Orchestration Markup <span>bps</span></label>
+        <div class="input-row">
+          <input type="range" min="10" max="80" step="5" value="30" id="yunoMarkup" oninput="recalc()">
+          <div class="value-display" id="yunoMarkup-val">30 bps</div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Fixed Fee per Transaction <span>$</span></label>
+        <div class="input-row">
+          <input type="range" min="0.005" max="0.10" step="0.005" value="0.02" id="yunoFixedFee" oninput="recalc()">
+          <div class="value-display" id="yunoFixedFee-val">$0.020</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div>
+      <!-- Cost comparison table -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Cost Comparison — Annual</div>
+        <table class="comp-table">
+          <tr>
+            <th style="width:35%">Metric</th>
+            <th class="current">Current (3 PSPs)</th>
+            <th class="adyen">Adyen (Single)</th>
+            <th class="yuno">Yuno (Orchestrated)</th>
+          </tr>
+          <tr><td>Total Annual Cost</td><td id="r-curr-cost">$25.7M</td><td id="r-adyen-cost">$22.5M</td><td id="r-yuno-cost" class="highlight">$17.5M</td></tr>
+          <tr><td class="indent">Acquirer Passthrough</td><td>—</td><td>Bundled</td><td id="r-acq-pass">$14.4M</td></tr>
+          <tr><td class="indent">Orchestration Fee</td><td>—</td><td>—</td><td id="r-orch-fee">$3.1M</td></tr>
+          <tr><td>Effective Rate (all-in)</td><td id="r-curr-rate">6.1%</td><td id="r-adyen-rate">~5.4%</td><td id="r-yuno-rate" class="highlight">3.7%</td></tr>
+          <tr><td>Savings vs Current</td><td>—</td><td id="r-adyen-save">$3.1M</td><td id="r-yuno-save" class="highlight">$8.2M</td></tr>
+          <tr><td>Savings vs Adyen</td><td>—</td><td>—</td><td id="r-vs-adyen" class="highlight">$5.1M</td></tr>
+        </table>
+      </div>
+
+      <!-- Value creation -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Value Creation Breakdown</div>
+        <div id="breakdown-chart" class="breakdown">
+          <div style="background:var(--green);flex:42" title="Approval Uplift">Approval $7.8M</div>
+          <div style="background:var(--teal);flex:12" title="Smart Retry">Retry $2.2M</div>
+          <div style="background:var(--navy);flex:44" title="Cost Savings">Cost $8.2M</div>
+          <div style="background:var(--purple);flex:2" title="Ops Savings">Ops $0.3M</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <div><span style="font-size:12px;color:var(--muted)">Approval Rate Uplift</span><br><strong id="r-val-approval">$7,762,154</strong></div>
+          <div><span style="font-size:12px;color:var(--muted)">Smart Retry Recovery</span><br><strong id="r-val-retry">$2,243,355</strong></div>
+          <div><span style="font-size:12px;color:var(--muted)">Processing Cost Savings</span><br><strong id="r-val-cost">$8,187,749</strong></div>
+          <div><span style="font-size:12px;color:var(--muted)">Operational Savings</span><br><strong id="r-val-ops">$283,000</strong></div>
+        </div>
+      </div>
+
+      <!-- Value bar -->
+      <div class="value-bar">
+        <div><div class="label">Total Annual Value Created</div><div style="color:#94A3B8;font-size:12px">Net of all Yuno + acquirer costs</div></div>
+        <div class="amount" id="r-total-value">$18.5M</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- TAB: PRESENTATION -->
+<div id="tab-presentation" class="tab-content">
+<div class="container">
+  <div class="slide-container">
+    <!-- Slide 1: Title -->
+    <div class="slide slide-dark active" id="slide-1">
+      <div style="position:absolute;top:-60px;right:-60px;width:300px;height:300px;border-radius:50%;background:rgba(42,53,122,0.6)"></div>
+      <div class="s-tag" style="margin-top:20px">YUNO</div>
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:24px">CONFIDENTIAL — COMMERCIAL PROPOSAL</div>
+      <div class="s-title" style="color:white;font-size:40px">Arcadia Gaming<br>Deal Strategy & Commercial Proposal</div>
+      <div class="s-divider"></div>
+      <div style="color:#94A3B8;font-size:15px;margin-top:12px">$420M Annual Payment Volume | 18 Countries | Mobile Gaming</div>
+      <div style="color:#475569;font-size:12px;margin-top:8px">Payment Orchestration • Smart Routing • Local Acquiring • Unified Platform</div>
+      <div style="margin-top:auto">
+        <div class="s-metrics">
+          <div><div class="s-metric-val" id="p-benefit">$18.5M+</div><div class="s-metric-label">Annual Net Benefit</div></div>
+          <div><div class="s-metric-val" id="p-sea">77%</div><div class="s-metric-label">SEA Approval Rate</div></div>
+          <div><div class="s-metric-val" id="p-rate">3.7%</div><div class="s-metric-label">Effective Rate (IC++)</div></div>
+          <div><div class="s-metric-val">6 Weeks</div><div class="s-metric-label">Implementation</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2: Executive Summary -->
+    <div class="slide slide-light" id="slide-2">
+      <div class="s-tag">EXECUTIVE SUMMARY</div>
+      <div class="s-title" style="color:var(--dark);font-size:30px">The Arcadia Gaming Opportunity</div>
+      <div class="s-cards" style="margin-bottom:20px">
+        <div class="s-card"><div class="s-card-title">Annual TPV</div><div class="s-card-value" id="p-tpv">$420M</div><div class="s-card-sub">Across 18 countries</div></div>
+        <div class="s-card"><div class="s-card-title">Current Cost</div><div class="s-card-value" id="p-curr-cost">$25.7M/yr</div><div class="s-card-sub" id="p-curr-rate-sub">6.1% eff. rate</div></div>
+        <div class="s-card"><div class="s-card-title">Failed Payments</div><div class="s-card-value" id="p-failed">$167.8M</div><div class="s-card-sub">In attempted volume</div></div>
+        <div class="s-card"><div class="s-card-title">Net Benefit</div><div class="s-card-value" style="color:var(--green)" id="p-net-val">$18.5M+</div><div class="s-card-sub">With Yuno orchestration</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1">
+        <div style="border-left:4px solid var(--teal);padding-left:16px">
+          <div style="font-size:16px;font-weight:700;color:var(--dark);margin-bottom:8px">The Problem</div>
+          <ul style="font-size:11px;color:var(--text);line-height:1.8;padding-left:16px">
+            <li>68% approval in SEA — cross-border losing $108.7M in failed attempts</li>
+            <li>Fragmented 3-provider stack, 11-bank reconciliation nightmare</li>
+            <li>3.8% MDR in LatAm, CFO mandate to cut costs 8%</li>
+            <li>No retry logic — $4-6M/yr in recoverable transactions lost</li>
+          </ul>
+        </div>
+        <div style="border-left:4px solid var(--green);padding-left:16px">
+          <div style="font-size:16px;font-weight:700;color:var(--dark);margin-bottom:8px">Our Solution</div>
+          <ul style="font-size:11px;color:var(--text);line-height:1.8;padding-left:16px">
+            <li>Single orchestration layer replaces 3 integrations</li>
+            <li>Local acquiring: SEA 68%→77%, LatAm 74%→80%</li>
+            <li>IC++ at 3.7% effective vs 6.1% current — saves $8.2M+/yr</li>
+            <li>Smart retry recovers ~$2.2M in lost transaction value</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Cost Comparison -->
+    <div class="slide slide-white" id="slide-3">
+      <div class="s-tag">COMMERCIAL PROPOSAL</div>
+      <div class="s-title" style="color:var(--dark);font-size:28px">Orchestrated IC++ Pricing</div>
+      <div style="background:#EFF6FF;border-left:4px solid var(--navy);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:12px;color:var(--dark)">
+        <strong>YUNO = ORCHESTRATION LAYER</strong> — Routes to best underlying acquirer per region. Total cost = Acquirer passthrough + Yuno fee.
+      </div>
+      <table class="comp-table" style="font-size:12px">
+        <tr><th style="width:32%">Metric</th><th class="current">Current (3 PSPs)</th><th class="adyen">Adyen (Single)</th><th class="yuno">Yuno (Orchestrated)</th></tr>
+        <tr><td>Total Annual Cost</td><td id="p-t-curr">$25.7M</td><td id="p-t-adyen">$22.5M</td><td class="highlight" id="p-t-yuno">$17.5M</td></tr>
+        <tr><td class="indent">Acquirer Passthrough</td><td>N/A (direct)</td><td>Bundled in 2.7%</td><td id="p-t-pass">$14.4M</td></tr>
+        <tr><td class="indent">Orchestration Fee</td><td>N/A</td><td>N/A</td><td id="p-t-orch">$3.1M</td></tr>
+        <tr><td>Effective Rate</td><td id="p-t-curr-r">6.1%</td><td id="p-t-adyen-r">~5.4%</td><td class="highlight" id="p-t-yuno-r">3.7%</td></tr>
+        <tr><td>SEA Approval</td><td>68%</td><td>76-78%</td><td class="highlight" id="p-t-sea">77% (SLA)</td></tr>
+        <tr><td>Implementation</td><td>In place</td><td>6-8 months</td><td class="highlight">6 weeks</td></tr>
+      </table>
+    </div>
+
+    <!-- Slide 4: Financial Impact -->
+    <div class="slide slide-white" id="slide-4">
+      <div class="s-tag">FINANCIAL IMPACT</div>
+      <div class="s-title" style="color:var(--dark);font-size:28px">Year 1 Value Creation</div>
+      <div class="s-cards" style="margin-bottom:16px">
+        <div class="s-card" style="border-top-color:var(--green)"><div class="s-card-title">Approval Uplift</div><div class="s-card-value" id="p-v-approval">$7.8M</div><div class="s-card-sub">Gross profit from incremental approved txns</div></div>
+        <div class="s-card" style="border-top-color:var(--teal)"><div class="s-card-title">Smart Retry</div><div class="s-card-value" id="p-v-retry">$2.2M</div><div class="s-card-sub">Recovered from soft decline retries</div></div>
+        <div class="s-card" style="border-top-color:var(--navy)"><div class="s-card-title">Cost Savings</div><div class="s-card-value" id="p-v-cost">$8.2M</div><div class="s-card-sub">Processing cost reduction vs current</div></div>
+        <div class="s-card" style="border-top-color:var(--purple)"><div class="s-card-title">Ops Savings</div><div class="s-card-value">$283K</div><div class="s-card-sub">Recon + engineering reduction</div></div>
+      </div>
+      <div class="value-bar">
+        <div><div class="label">Total Annual Value Created</div></div>
+        <div class="amount" id="p-v-total">$18.5M+</div>
+      </div>
+    </div>
+
+    <!-- Slide 5: 90-Day Plan -->
+    <div class="slide slide-light" id="slide-5">
+      <div class="s-tag">90-DAY DEAL PLAN</div>
+      <div class="s-title" style="color:var(--dark);font-size:28px">Execution Timeline</div>
+      <div style="display:flex;gap:12px;flex:1">
+        <div style="flex:1">
+          <div style="background:var(--teal);color:white;padding:10px;border-radius:8px 8px 0 0;text-align:center;font-size:12px;font-weight:700">WEEK 1-2: Engage</div>
+          <div style="background:white;padding:12px;border:1px solid var(--border);border-radius:0 0 8px 8px;font-size:11px;line-height:1.8">
+            • Deliver proposal to Priya<br>• Technical deep-dive with Marcus<br>• Financial model walkthrough with Sarah<br>• Critical discovery Q&A
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="background:var(--navy);color:white;padding:10px;border-radius:8px 8px 0 0;text-align:center;font-size:12px;font-weight:700">WEEK 3-4: Prove</div>
+          <div style="background:white;padding:12px;border:1px solid var(--border);border-radius:0 0 8px 8px;font-size:11px;line-height:1.8">
+            • Launch POC on Indonesian traffic<br>• Exec sponsor meeting (CRO → CFO)<br>• Share gaming customer references<br>• Reconciliation demo for David
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="background:var(--green);color:white;padding:10px;border-radius:8px 8px 0 0;text-align:center;font-size:12px;font-weight:700">WEEK 5-8: Negotiate</div>
+          <div style="background:white;padding:12px;border:1px solid var(--border);border-radius:0 0 8px 8px;font-size:11px;line-height:1.8">
+            • Present POC results<br>• Finalize terms with SLA commitments<br>• Contract redline & legal review<br>• Architecture sign-off from CTO
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="background:var(--purple);color:white;padding:10px;border-radius:8px 8px 0 0;text-align:center;font-size:12px;font-weight:700">WEEK 9-11: Close</div>
+          <div style="background:white;padding:12px;border:1px solid var(--border);border-radius:0 0 8px 8px;font-size:11px;line-height:1.8">
+            • Contract execution<br>• Implementation kickoff<br>• India + Nigeria + Turkey go-live<br>• Monitor KPIs
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6: Closing -->
+    <div class="slide slide-dark" id="slide-6">
+      <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:rgba(42,53,122,0.6)"></div>
+      <div class="s-tag" style="margin-top:40px">YUNO</div>
+      <div class="s-title" style="color:white;font-size:38px">One API. Every Payment.<br>Everywhere Arcadia Plays.</div>
+      <div class="s-divider"></div>
+      <div class="s-metrics" style="margin-top:32px">
+        <div><div class="s-metric-val" id="p-c-benefit">$18.5M+</div><div class="s-metric-label">Annual Net Benefit</div></div>
+        <div><div class="s-metric-val" id="p-c-sea">77%</div><div class="s-metric-label">SEA Approval Rate</div></div>
+        <div><div class="s-metric-val" id="p-c-rate">3.7%</div><div class="s-metric-label">Effective Rate (IC++)</div></div>
+        <div><div class="s-metric-val">6 Weeks</div><div class="s-metric-label">Implementation</div></div>
+      </div>
+      <div style="margin-top:auto;color:#94A3B8;font-size:13px">
+        Next Step: Schedule technical deep-dive with Marcus's team + POC scope for Indonesian traffic
+      </div>
+      <div style="color:#475569;font-size:11px;margin-top:8px">Contact: Samuel Vieira | samuel@y.uno | Yuno Payment Orchestration</div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="slide-nav">
+      <button onclick="prevSlide()">← Previous</button>
+      <span class="counter" id="slide-counter">1 / 6</span>
+      <button onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// =============== TAB SWITCHING ===============
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.nav-tabs button').forEach(b => {
+    if (b.textContent.toLowerCase().includes(tab.substring(0, 5))) b.classList.add('active');
+  });
+}
+
+// =============== SLIDE NAVIGATION ===============
+let currentSlide = 1;
+const totalSlides = 6;
+function showSlide(n) {
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.getElementById('slide-' + n).classList.add('active');
+  document.getElementById('slide-counter').textContent = n + ' / ' + totalSlides;
+  currentSlide = n;
+}
+function nextSlide() { if (currentSlide < totalSlides) showSlide(currentSlide + 1); }
+function prevSlide() { if (currentSlide > 1) showSlide(currentSlide - 1); }
+
+// =============== MODEL CALCULATION ===============
+function fmt(n) {
+  if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+function fmtFull(n) { return '$' + n.toLocaleString('en-US', {maximumFractionDigits: 0}); }
+
+function recalc() {
+  // Read inputs
+  const tpv = parseFloat(document.getElementById('tpv').value) * 1e6;
+  const avgTxn = parseFloat(document.getElementById('avgTxn').value);
+  const gm = parseFloat(document.getElementById('grossMargin').value) / 100;
+  const seaCurr = parseFloat(document.getElementById('seaApproval').value) / 100;
+  const latamCurr = parseFloat(document.getElementById('latamApproval').value) / 100;
+  const euCurr = parseFloat(document.getElementById('euApproval').value) / 100;
+  const seaTgt = parseFloat(document.getElementById('seaTarget').value) / 100;
+  const latamTgt = parseFloat(document.getElementById('latamTarget').value) / 100;
+  const euTgt = parseFloat(document.getElementById('euTarget').value) / 100;
+  const yunoMarkupBps = parseFloat(document.getElementById('yunoMarkup').value);
+  const yunoFixed = parseFloat(document.getElementById('yunoFixedFee').value);
+
+  // Update displays
+  document.getElementById('tpv-val').textContent = '$' + (tpv/1e6).toFixed(0) + 'M';
+  document.getElementById('avgTxn-val').textContent = '$' + avgTxn.toFixed(2);
+  document.getElementById('grossMargin-val').textContent = (gm*100).toFixed(0) + '%';
+  document.getElementById('seaApproval-val').textContent = (seaCurr*100).toFixed(0) + '%';
+  document.getElementById('latamApproval-val').textContent = (latamCurr*100).toFixed(0) + '%';
+  document.getElementById('euApproval-val').textContent = (euCurr*100).toFixed(0) + '%';
+  document.getElementById('seaTarget-val').textContent = (seaTgt*100).toFixed(0) + '%';
+  document.getElementById('latamTarget-val').textContent = (latamTgt*100).toFixed(0) + '%';
+  document.getElementById('euTarget-val').textContent = (euTgt*100).toFixed(0) + '%';
+  document.getElementById('yunoMarkup-val').textContent = yunoMarkupBps.toFixed(0) + ' bps';
+  document.getElementById('yunoFixedFee-val').textContent = '$' + yunoFixed.toFixed(3);
+
+  // Regional splits
+  const seaPct = 0.55, latamPct = 0.30, euPct = 0.15;
+
+  // Volume
+  const seaTPV = tpv * seaPct;
+  const latamTPV = tpv * latamPct;
+  const euTPV = tpv * euPct;
+  const seaTxns = seaTPV / avgTxn;
+  const latamTxns = latamTPV / avgTxn;
+  const euTxns = euTPV / avgTxn;
+  const totalTxns = seaTxns + latamTxns + euTxns;
+
+  // Attempted volume
+  const seaAttempted = seaTPV / seaCurr;
+  const latamAttempted = latamTPV / latamCurr;
+  const euAttempted = euTPV / euCurr;
+  const totalAttempted = seaAttempted + latamAttempted + euAttempted;
+  const totalFailed = totalAttempted - tpv;
+
+  // Current costs
+  const currCostSEA = seaTPV * 0.034 + seaTxns * 0.30;
+  const currCostLatam = latamTPV * 0.038 + latamTxns * 0.25;
+  const currCostEU = euTPV * 0.029 + euTxns * 0.20;
+  const currTotal = currCostSEA + currCostLatam + currCostEU;
+  const currRate = currTotal / tpv;
+
+  // Yuno projected volume
+  const seaYunoTPV = seaAttempted * seaTgt;
+  const latamYunoTPV = latamAttempted * latamTgt;
+  const euYunoTPV = euAttempted * euTgt;
+
+  // Smart retry
+  const softDeclinePct = 0.40, retryRate = 0.25;
+  const seaRemaining = seaAttempted - seaYunoTPV;
+  const latamRemaining = latamAttempted - latamYunoTPV;
+  const euRemaining = euAttempted - euYunoTPV;
+  const seaRetry = seaRemaining * softDeclinePct * retryRate;
+  const latamRetry = latamRemaining * softDeclinePct * retryRate;
+  const euRetry = euRemaining * softDeclinePct * retryRate;
+  const totalRetry = seaRetry + latamRetry + euRetry;
+
+  const totalYunoTPV = (seaYunoTPV + latamYunoTPV + euYunoTPV) + totalRetry;
+  const seaTotalYuno = seaYunoTPV + seaRetry;
+  const latamTotalYuno = latamYunoTPV + latamRetry;
+  const euTotalYuno = euYunoTPV + euRetry;
+  const yunoTxns = totalYunoTPV / avgTxn;
+
+  // Acquirer passthrough
+  const acqSEA = seaTotalYuno * (0.018 + 0.003 + 0.004) + (seaTotalYuno / avgTxn) * 0.05;
+  const acqLatam = latamTotalYuno * (0.022 + 0.003 + 0.005) + (latamTotalYuno / avgTxn) * 0.08;
+  const acqEU = euTotalYuno * (0.005 + 0.003 + 0.003) + (euTotalYuno / avgTxn) * 0.04;
+  const acqTotal = acqSEA + acqLatam + acqEU;
+
+  // Yuno orchestration fee
+  const yunoMarkupRate = yunoMarkupBps / 10000;
+  const orchVolume = totalYunoTPV * yunoMarkupRate;
+  const orchFixed = yunoTxns * yunoFixed;
+  const orchRouting = yunoTxns * 0.005;
+  const orchFraud = yunoTxns * 0.01;
+  const orchPlatform = 60000; // $5K/mo
+  const orchTotal = orchVolume + orchFixed + orchRouting + orchFraud + orchPlatform;
+
+  const yunoTotal = acqTotal + orchTotal;
+  const yunoRate = yunoTotal / totalYunoTPV;
+
+  // Adyen
+  const adyenSEATPV = seaAttempted * 0.77;
+  const adyenLatamTPV = latamAttempted * 0.81;
+  const adyenEUTPV = euTPV;
+  const adyenTotalTPV = adyenSEATPV + adyenLatamTPV + adyenEUTPV;
+  const adyenCost = adyenTotalTPV * 0.027 + (adyenTotalTPV / avgTxn) * 0.22;
+  const adyenRate = adyenCost / adyenTotalTPV;
+
+  // Value creation
+  const incrementalTPV = (seaYunoTPV + latamYunoTPV + euYunoTPV) - tpv;
+  const approvalValue = incrementalTPV * gm;
+  const retryValue = totalRetry * gm;
+  const costSavings = currTotal - yunoTotal;
+  const opsSavings = 180000 * 0.60 + 250000 * 0.70;
+  const totalValue = approvalValue + retryValue + costSavings + opsSavings;
+
+  // Update KPIs
+  document.getElementById('kpi-benefit').textContent = fmt(totalValue);
+  document.getElementById('kpi-savings').textContent = fmt(costSavings);
+  document.getElementById('kpi-rate').textContent = (yunoRate * 100).toFixed(1) + '%';
+  document.getElementById('kpi-adyen-savings').textContent = fmt(adyenCost - yunoTotal);
+  document.getElementById('kpi-approval').textContent = (seaTgt * 100).toFixed(0) + '%';
+
+  // Update comparison table
+  document.getElementById('r-curr-cost').textContent = fmt(currTotal);
+  document.getElementById('r-adyen-cost').textContent = fmt(adyenCost);
+  document.getElementById('r-yuno-cost').textContent = fmt(yunoTotal);
+  document.getElementById('r-acq-pass').textContent = fmt(acqTotal);
+  document.getElementById('r-orch-fee').textContent = fmt(orchTotal);
+  document.getElementById('r-curr-rate').textContent = (currRate * 100).toFixed(1) + '%';
+  document.getElementById('r-adyen-rate').textContent = '~' + (adyenRate * 100).toFixed(1) + '%';
+  document.getElementById('r-yuno-rate').textContent = (yunoRate * 100).toFixed(1) + '%';
+  document.getElementById('r-adyen-save').textContent = fmt(currTotal - adyenCost);
+  document.getElementById('r-yuno-save').textContent = fmt(costSavings);
+  document.getElementById('r-vs-adyen').textContent = fmt(adyenCost - yunoTotal);
+
+  // Value breakdown
+  document.getElementById('r-val-approval').textContent = fmtFull(approvalValue);
+  document.getElementById('r-val-retry').textContent = fmtFull(retryValue);
+  document.getElementById('r-val-cost').textContent = fmtFull(costSavings);
+  document.getElementById('r-val-ops').textContent = fmtFull(opsSavings);
+  document.getElementById('r-total-value').textContent = fmt(totalValue);
+
+  // Breakdown bar
+  const bTotal = Math.abs(approvalValue) + Math.abs(retryValue) + Math.abs(costSavings) + Math.abs(opsSavings);
+  const bChart = document.getElementById('breakdown-chart');
+  bChart.innerHTML = `
+    <div style="background:var(--green);flex:${Math.round(approvalValue/bTotal*100)}" title="Approval Uplift">Approval ${fmt(approvalValue)}</div>
+    <div style="background:var(--teal);flex:${Math.round(retryValue/bTotal*100)}" title="Smart Retry">Retry ${fmt(retryValue)}</div>
+    <div style="background:var(--navy);flex:${Math.round(costSavings/bTotal*100)}" title="Cost Savings">Cost ${fmt(costSavings)}</div>
+    <div style="background:var(--purple);flex:${Math.round(opsSavings/bTotal*100)}" title="Ops Savings">Ops ${fmt(opsSavings)}</div>
+  `;
+
+  // Update presentation slides
+  document.getElementById('p-benefit').textContent = fmt(totalValue) + '+';
+  document.getElementById('p-sea').textContent = (seaTgt * 100).toFixed(0) + '%';
+  document.getElementById('p-rate').textContent = (yunoRate * 100).toFixed(1) + '%';
+  document.getElementById('p-tpv').textContent = '$' + (tpv/1e6).toFixed(0) + 'M';
+  document.getElementById('p-curr-cost').textContent = fmt(currTotal) + '/yr';
+  document.getElementById('p-curr-rate-sub').textContent = (currRate * 100).toFixed(1) + '% eff. rate';
+  document.getElementById('p-failed').textContent = fmt(totalFailed);
+  document.getElementById('p-net-val').textContent = fmt(totalValue) + '+';
+  document.getElementById('p-t-curr').textContent = fmt(currTotal);
+  document.getElementById('p-t-adyen').textContent = fmt(adyenCost);
+  document.getElementById('p-t-yuno').textContent = fmt(yunoTotal);
+  document.getElementById('p-t-pass').textContent = fmt(acqTotal);
+  document.getElementById('p-t-orch').textContent = fmt(orchTotal);
+  document.getElementById('p-t-curr-r').textContent = (currRate * 100).toFixed(1) + '%';
+  document.getElementById('p-t-adyen-r').textContent = '~' + (adyenRate * 100).toFixed(1) + '%';
+  document.getElementById('p-t-yuno-r').textContent = (yunoRate * 100).toFixed(1) + '%';
+  document.getElementById('p-t-sea').textContent = (seaTgt * 100).toFixed(0) + '% (SLA)';
+  document.getElementById('p-v-approval').textContent = fmt(approvalValue);
+  document.getElementById('p-v-retry').textContent = fmt(retryValue);
+  document.getElementById('p-v-cost').textContent = fmt(costSavings);
+  document.getElementById('p-v-total').textContent = fmt(totalValue) + '+';
+  document.getElementById('p-c-benefit').textContent = fmt(totalValue) + '+';
+  document.getElementById('p-c-sea').textContent = (seaTgt * 100).toFixed(0) + '%';
+  document.getElementById('p-c-rate').textContent = (yunoRate * 100).toFixed(1) + '%';
+}
+
+// Initial calculation
+recalc();
+</script>
+
+</body>
+</html>
